@@ -26,6 +26,7 @@ import java.util.UUID;
 import org.fenixedu.bennu.oauth.OAuthProperties;
 import org.fenixedu.bennu.oauth.domain.ApplicationUserSession;
 
+import org.fenixedu.bennu.oauth.domain.ServiceApplication;
 import pt.ist.fenixframework.DomainObject;
 import pt.ist.fenixframework.FenixFramework;
 
@@ -33,6 +34,9 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Strings;
 import com.google.common.hash.Hashing;
 import com.google.gson.JsonObject;
+
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.core.HttpHeaders;
 
 public class OAuthUtils {
 
@@ -103,5 +107,65 @@ public class OAuthUtils {
         } catch (Exception nfe) {
             return Optional.empty();
         }
+    }
+
+    public static Optional<ServiceApplication> extractServiceApplication(String accessToken) {
+
+        if (Strings.isNullOrEmpty(accessToken)) {
+            return Optional.empty();
+        }
+
+        try {
+            String fullToken = new String(Base64.getDecoder().decode(accessToken), StandardCharsets.UTF_8);
+            String[] accessTokenBuilder = fullToken.split(":");
+            if (accessTokenBuilder.length != 2) {
+                return Optional.empty();
+            }
+            return OAuthUtils.getDomainObject(accessTokenBuilder[0], ServiceApplication.class);
+        } catch (IllegalArgumentException iea) {
+            return Optional.empty();
+        }
+    }
+
+    public static Optional<ApplicationUserSession> extractUserSession(String accessToken) {
+        if (Strings.isNullOrEmpty(accessToken)) {
+            return Optional.empty();
+        }
+        try {
+            String fullToken = new String(Base64.getDecoder().decode(accessToken), StandardCharsets.UTF_8);
+            String[] accessTokenBuilder = fullToken.split(":");
+            if (accessTokenBuilder.length != 2) {
+                return Optional.empty();
+            }
+
+            return OAuthUtils.getDomainObject(accessTokenBuilder[0], ApplicationUserSession.class);
+        } catch (IllegalArgumentException iea) {
+            return Optional.empty();
+        }
+
+    }
+
+    public static String getAccessToken(ContainerRequestContext requestContext) {
+        return getHeaderOrQueryParam(requestContext, OAuthUtils.ACCESS_TOKEN);
+    }
+
+    private static String getAuthorizationHeader(ContainerRequestContext request) {
+        String authorization = request.getHeaderString(HttpHeaders.AUTHORIZATION);
+        if (authorization != null && authorization.startsWith(OAuthUtils.TOKEN_TYPE_HEADER_ACCESS_TOKEN)) {
+            return authorization.substring(OAuthUtils.TOKEN_TYPE_HEADER_ACCESS_TOKEN.length()).trim();
+        }
+        return null;
+    }
+
+    private static String getHeaderOrQueryParam(ContainerRequestContext requestContext, String paramName) {
+        String paramValue = getAuthorizationHeader(requestContext);
+        if (!Strings.isNullOrEmpty(paramValue)) {
+            return paramValue;
+        }
+        paramValue = requestContext.getHeaderString(paramName);
+        if (Strings.isNullOrEmpty(paramValue)) {
+            paramValue = requestContext.getUriInfo().getQueryParameters().getFirst(paramName);
+        }
+        return paramValue;
     }
 }

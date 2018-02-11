@@ -62,11 +62,11 @@ class BennuOAuthAuthorizationFilter implements ContainerRequestFilter {
 
         String ipAddress = getIpAddress();
 
-        String accessToken = getAccessToken(requestContext);
+        String accessToken = OAuthUtils.getAccessToken(requestContext);
 
         final OAuthEndpoint endpoint = requestInfo.getResourceMethod().getAnnotation(OAuthEndpoint.class);
 
-        Optional<ServiceApplication> serviceApplication = extractServiceApplication(accessToken);
+        Optional<ServiceApplication> serviceApplication = OAuthUtils.extractServiceApplication(accessToken);
 
         if (endpoint.serviceOnly() && !serviceApplication.isPresent()) {
             requestContext.abortWith(Response.status(Status.NOT_FOUND).build());
@@ -118,7 +118,7 @@ class BennuOAuthAuthorizationFilter implements ContainerRequestFilter {
         Optional<ExternalApplicationScope> scope = ExternalApplicationScope.forKey(endpoint.value());
 
         if (scope.isPresent()) {
-            Optional<ApplicationUserSession> session = extractUserSession(accessToken);
+            Optional<ApplicationUserSession> session = OAuthUtils.extractUserSession(accessToken);
             if (session.isPresent()) {
                 ApplicationUserSession appUserSession = session.get();
                 ExternalApplication app = session.get().getApplicationUserAuthorization().getApplication();
@@ -191,63 +191,5 @@ class BennuOAuthAuthorizationFilter implements ContainerRequestFilter {
                 .build());
     }
 
-    private Optional<ServiceApplication> extractServiceApplication(String accessToken) {
 
-        if (Strings.isNullOrEmpty(accessToken)) {
-            return Optional.empty();
-        }
-
-        try {
-            String fullToken = new String(Base64.getDecoder().decode(accessToken), StandardCharsets.UTF_8);
-            String[] accessTokenBuilder = fullToken.split(":");
-            if (accessTokenBuilder.length != 2) {
-                return Optional.empty();
-            }
-            return OAuthUtils.getDomainObject(accessTokenBuilder[0], ServiceApplication.class);
-        } catch (IllegalArgumentException iea) {
-            return Optional.empty();
-        }
-    }
-
-    private Optional<ApplicationUserSession> extractUserSession(String accessToken) {
-        if (Strings.isNullOrEmpty(accessToken)) {
-            return Optional.empty();
-        }
-        try {
-            String fullToken = new String(Base64.getDecoder().decode(accessToken), StandardCharsets.UTF_8);
-            String[] accessTokenBuilder = fullToken.split(":");
-            if (accessTokenBuilder.length != 2) {
-                return Optional.empty();
-            }
-
-            return OAuthUtils.getDomainObject(accessTokenBuilder[0], ApplicationUserSession.class);
-        } catch (IllegalArgumentException iea) {
-            return Optional.empty();
-        }
-
-    }
-
-    private String getAccessToken(ContainerRequestContext requestContext) {
-        return getHeaderOrQueryParam(requestContext, OAuthUtils.ACCESS_TOKEN);
-    }
-
-    private String getAuthorizationHeader(ContainerRequestContext request) {
-        String authorization = request.getHeaderString(HttpHeaders.AUTHORIZATION);
-        if (authorization != null && authorization.startsWith(OAuthUtils.TOKEN_TYPE_HEADER_ACCESS_TOKEN)) {
-            return authorization.substring(OAuthUtils.TOKEN_TYPE_HEADER_ACCESS_TOKEN.length()).trim();
-        }
-        return null;
-    }
-
-    private String getHeaderOrQueryParam(ContainerRequestContext requestContext, String paramName) {
-        String paramValue = getAuthorizationHeader(requestContext);
-        if (!Strings.isNullOrEmpty(paramValue)) {
-            return paramValue;
-        }
-        paramValue = requestContext.getHeaderString(paramName);
-        if (Strings.isNullOrEmpty(paramValue)) {
-            paramValue = requestContext.getUriInfo().getQueryParameters().getFirst(paramName);
-        }
-        return paramValue;
-    }
 }
