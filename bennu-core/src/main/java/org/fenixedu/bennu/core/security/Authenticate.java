@@ -18,6 +18,8 @@ package org.fenixedu.bennu.core.security;
 
 import java.util.Collection;
 import java.util.Locale;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import javax.servlet.http.HttpServletRequest;
@@ -153,7 +155,7 @@ public class Authenticate {
             final AuthenticationContext authenticationContext = (AuthenticationContext) session.getAttribute(LOGGED_USER_AUTHENTICATION_CONTEXT_ATTRIBUTE);
             if (authenticationContext != null) {
                 final User user = authenticationContext.getUser();
-                if (user != null && FenixFramework.isDomainObjectValid(user)) {
+                if (user != null && FenixFramework.isDomainObjectValid(user) && requestSessionAdvice(session)) {
                     loggedUserContext.set(authenticationContext);
                 } else {
                     clear();
@@ -180,6 +182,12 @@ public class Authenticate {
 
     public static void removeUserAuthenticationListener(final UserAuthenticationListener listener) {
         userAuthenticationListeners.remove(listener);
+    }
+
+    private static boolean requestSessionAdvice(final HttpSession session) {
+        return userAuthenticationListeners.stream()
+                .map(l -> l.shouldAllowSession(session))
+                .reduce(true, (a, b) -> a && b);
     }
 
     private static void fireLoginListeners(final HttpServletRequest request, final HttpServletResponse response, final AuthenticationContext authenticationContext) {

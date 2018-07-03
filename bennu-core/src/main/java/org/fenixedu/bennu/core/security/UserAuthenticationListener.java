@@ -2,8 +2,10 @@ package org.fenixedu.bennu.core.security;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.servlet.http.HttpSession;
 
 import org.fenixedu.bennu.core.domain.AuthenticationContext;
+import org.fenixedu.bennu.core.domain.Bennu;
 import org.fenixedu.bennu.core.domain.User;
 
 /**
@@ -20,6 +22,10 @@ public interface UserAuthenticationListener {
 
     default void onLogout(HttpServletRequest request, HttpServletResponse response, AuthenticationContext context) {
         onLogout(request, response, context.getUser());
+    }
+
+    default boolean shouldAllowSession(HttpSession session) {
+        return true;
     }
 
     default void onLogin(HttpServletRequest request, HttpServletResponse response, User user) {

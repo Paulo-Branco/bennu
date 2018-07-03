@@ -1,0 +1,36 @@
+package org.fenixedu.bennu.connect.client.domain;
+
+public class SigningKey {
+    public String keyId;
+    public Serializable publicKey;
+}
+
+public class RevokedToken {
+    public String tokenId;
+}
+
+public class AuthenticationEvent {
+    public String tokenId;
+    public String sessionId;
+}
+
+relation BennuSigningKeys {
+    .org.fenixedu.bennu.core.domain.Bennu playsRole bennuSigningKey;
+    SigningKey playsRole signingKey {
+        multiplicity *;
+    }
+}
+
+relation BennuRevokedTokens {
+    .org.fenixedu.bennu.core.domain.Bennu playsRole bennu;
+    RevokedToken playsRole revokedToken {
+        multiplicity *;
+    }
+}
+
+relation BennuAuthenticationEvents {
+    .org.fenixedu.bennu.core.domain.Bennu playsRole bennu;
+    AuthenticationEvent playsRole authenticationEvent {
+        multiplicity *;
+    }
+}
